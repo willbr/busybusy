@@ -49,6 +49,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.readability4j)
     implementation(libs.jsoup)
+    implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit)
 }
