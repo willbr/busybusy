@@ -45,8 +45,9 @@ arch_image() {
 provision_emulator() {
   local img; img="$(arch_image)"
   $SDKM "emulator" "$img"
-  if ! $AVDM list avd 2>/dev/null | grep -q "$AVD_NAME"; then
-    echo "no" | $AVDM create avd -n "$AVD_NAME" -k "$img" --device "pixel_7"
+  # avdmanager: --sdk-root (hyphen) must come AFTER the verb, unlike sdkmanager.
+  if ! "$AVD_MANAGER" list avd --sdk-root "$ANDROID_HOME" 2>/dev/null | grep -q "$AVD_NAME"; then
+    echo "no" | "$AVD_MANAGER" create avd -n "$AVD_NAME" -k "$img" --device "pixel_7" --sdk-root "$ANDROID_HOME"
   fi
   echo "Booting $AVD_NAME ..."
   # nohup + disown so the emulator survives this script exiting ("stays running").
