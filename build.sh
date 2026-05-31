@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Run from the repo root regardless of where this script is invoked from.
+cd "$(dirname "$0")"
+
 # --- Toolchain locations (Homebrew layout) ---
 export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
 
@@ -13,6 +16,8 @@ EMULATOR="$ANDROID_HOME/emulator/emulator"
 ADB="$ANDROID_HOME/platform-tools/adb"
 AVD_NAME="pixel7_api36"
 
+# $SDKM is used unquoted on purpose: word-splitting separates the binary from its
+# --sdk_root flag. Safe because these paths contain no spaces in the documented layout.
 SDKM="$SDK_MANAGER --sdk_root=$ANDROID_HOME"
 
 ensure_sdk() {
@@ -41,12 +46,14 @@ provision_emulator() {
     echo "no" | "$AVD_MANAGER" create avd -n "$AVD_NAME" -k "$img" --device "pixel_7"
   fi
   echo "Booting $AVD_NAME ..."
-  "$EMULATOR" -avd "$AVD_NAME" -netdelay none -netspeed full >/dev/null 2>&1 &
+  # nohup + disown so the emulator survives this script exiting ("stays running").
+  nohup "$EMULATOR" -avd "$AVD_NAME" -netdelay none -netspeed full >/dev/null 2>&1 &
+  disown
   "$ADB" wait-for-device
   until [[ "$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]]; do
     sleep 2
   done
-  echo "Emulator ready."
+  echo "Emulator ready (running in background; close it from the emulator window or 'adb emu kill')."
 }
 
 build() {
