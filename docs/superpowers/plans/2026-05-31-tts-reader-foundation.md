@@ -324,23 +324,34 @@ class MainActivity : ComponentActivity() {
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Resolve SDK location
+# --- Toolchain locations (Homebrew layout) ---
+# JDK 17 from temurin@17 cask:
+export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
+
+# cmdline-tools come from the read-only Homebrew cask, but sdkmanager installs
+# platforms/emulator/system-images into a SEPARATE writable SDK root.
+CMDLINE_TOOLS="${CMDLINE_TOOLS:-/opt/homebrew/share/android-commandlinetools/cmdline-tools/latest}"
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
-SDK_MANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-AVD_MANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
+
+SDK_MANAGER="$CMDLINE_TOOLS/bin/sdkmanager"
+AVD_MANAGER="$CMDLINE_TOOLS/bin/avdmanager"
 EMULATOR="$ANDROID_HOME/emulator/emulator"
 ADB="$ANDROID_HOME/platform-tools/adb"
 AVD_NAME="pixel7_api36"
 
+# Every sdkmanager/avdmanager call targets the writable root.
+SDKM="$SDK_MANAGER --sdk_root=$ANDROID_HOME"
+
 ensure_sdk() {
   if [[ ! -x "$SDK_MANAGER" ]]; then
     echo "ERROR: sdkmanager not found at $SDK_MANAGER"
-    echo "Install Android cmdline-tools into \$ANDROID_HOME/cmdline-tools/latest first."
+    echo "Install it with: brew install --cask android-commandlinetools"
     exit 1
   fi
+  mkdir -p "$ANDROID_HOME"
   echo "sdk.dir=$ANDROID_HOME" > local.properties
-  yes | "$SDK_MANAGER" --licenses >/dev/null || true
-  "$SDK_MANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+  yes | $SDKM --licenses >/dev/null || true
+  $SDKM "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 }
 
 # Detect host arch for system image
@@ -353,8 +364,8 @@ arch_image() {
 
 provision_emulator() {
   local img; img="$(arch_image)"
-  "$SDK_MANAGER" "emulator" "$img"
-  if ! "$AVD_MANAGER" list avd | grep -q "$AVD_NAME"; then
+  $SDKM "emulator" "$img"
+  if ! "$AVD_MANAGER" list avd 2>/dev/null | grep -q "$AVD_NAME"; then
     echo "no" | "$AVD_MANAGER" create avd -n "$AVD_NAME" -k "$img" --device "pixel_7"
   fi
   echo "Booting $AVD_NAME ..."
