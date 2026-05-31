@@ -16,12 +16,13 @@ EMULATOR="$ANDROID_HOME/emulator/emulator"
 ADB="$ANDROID_HOME/platform-tools/adb"
 AVD_NAME="pixel7_api36"
 
-# $SDKM / $AVDM are used unquoted on purpose: word-splitting separates the binary
-# from its flags. Safe because these paths contain no spaces in the documented layout.
-# Both MUST carry --sdk_root: without it the Homebrew avdmanager defaults its SDK
-# root to the current working directory and installs a stray cmdline-tools copy there.
+# sdkmanager takes --sdk_root (underscore). $SDKM is intentionally unquoted so
+# word-splitting separates the binary from its flag; safe because these paths
+# contain no spaces. avdmanager has NO sdk-root flag (it errors on both --sdk_root
+# and --sdk-root) — it reads the location from the exported ANDROID_HOME above, so
+# its calls below pass no sdk flag. Exporting ANDROID_HOME is also what stops the
+# tools from dropping a stray cmdline-tools copy in the current directory.
 SDKM="$SDK_MANAGER --sdk_root=$ANDROID_HOME"
-AVDM="$AVD_MANAGER --sdk_root=$ANDROID_HOME"
 
 ensure_sdk() {
   if [[ ! -x "$SDK_MANAGER" ]]; then
@@ -45,9 +46,9 @@ arch_image() {
 provision_emulator() {
   local img; img="$(arch_image)"
   $SDKM "emulator" "$img"
-  # avdmanager: --sdk-root (hyphen) must come AFTER the verb, unlike sdkmanager.
-  if ! "$AVD_MANAGER" list avd --sdk-root "$ANDROID_HOME" 2>/dev/null | grep -q "$AVD_NAME"; then
-    echo "no" | "$AVD_MANAGER" create avd -n "$AVD_NAME" -k "$img" --device "pixel_7" --sdk-root "$ANDROID_HOME"
+  # avdmanager reads the SDK location from the exported ANDROID_HOME (no flag).
+  if ! "$AVD_MANAGER" list avd 2>/dev/null | grep -q "$AVD_NAME"; then
+    echo "no" | "$AVD_MANAGER" create avd -n "$AVD_NAME" -k "$img" --device "pixel_7"
   fi
   echo "Booting $AVD_NAME ..."
   # nohup + disown so the emulator survives this script exiting ("stays running").
