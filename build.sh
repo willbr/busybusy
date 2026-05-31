@@ -11,7 +11,6 @@ CMDLINE_TOOLS="${CMDLINE_TOOLS:-/opt/homebrew/share/android-commandlinetools/cmd
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
 
 SDK_MANAGER="$CMDLINE_TOOLS/bin/sdkmanager"
-AVD_MANAGER="$CMDLINE_TOOLS/bin/avdmanager"
 EMULATOR="$ANDROID_HOME/emulator/emulator"
 ADB="$ANDROID_HOME/platform-tools/adb"
 AVD_NAME="pixel7_api36"
@@ -43,12 +42,49 @@ arch_image() {
   esac
 }
 
+# Writes the AVD config files directly. cmdline-tools 20.0's `avdmanager create avd`
+# is broken in the Homebrew layout ("Package path is not valid ... null" even when
+# sdkmanager confirms the system image is installed), so we author the AVD ourselves.
+create_avd() {
+  local img_rel="$1"
+  local avd_home="$HOME/.android/avd"
+  mkdir -p "$avd_home/$AVD_NAME.avd"
+  cat > "$avd_home/$AVD_NAME.ini" <<EOF
+avd.ini.encoding=UTF-8
+path=$avd_home/$AVD_NAME.avd
+path.rel=avd/$AVD_NAME.avd
+target=android-36
+EOF
+  cat > "$avd_home/$AVD_NAME.avd/config.ini" <<EOF
+avd.ini.encoding=UTF-8
+AvdId=$AVD_NAME
+PlayStore.enabled=false
+abi.type=arm64-v8a
+avd.ini.displayname=Pixel 7 API 36
+hw.cpu.arch=arm64
+hw.ramSize=2048
+image.sysdir.1=$img_rel/
+tag.display=Google APIs
+tag.id=google_apis
+hw.lcd.density=420
+hw.lcd.height=2400
+hw.lcd.width=1080
+hw.keyboard=yes
+hw.gpu.enabled=yes
+hw.gpu.mode=auto
+disk.dataPartition.size=6442450944
+fastboot.forceColdBoot=no
+EOF
+}
+
 provision_emulator() {
   local img; img="$(arch_image)"
   $SDKM "emulator" "$img"
-  # avdmanager reads the SDK location from the exported ANDROID_HOME (no flag).
-  if ! "$AVD_MANAGER" list avd 2>/dev/null | grep -q "$AVD_NAME"; then
-    echo "no" | "$AVD_MANAGER" create avd -n "$AVD_NAME" -k "$img" --device "pixel_7"
+  # img is e.g. "system-images;android-36;google_apis;arm64-v8a"; the on-disk
+  # relative path swaps ';' for '/'.
+  local img_rel="${img//;//}"
+  if ! "$EMULATOR" -list-avds 2>/dev/null | grep -q "$AVD_NAME"; then
+    create_avd "$img_rel"
   fi
   echo "Booting $AVD_NAME ..."
   # nohup + disown so the emulator survives this script exiting ("stays running").
