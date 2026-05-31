@@ -20,7 +20,9 @@ class ShareReceiverActivity : ComponentActivity() {
         val shared = intent?.takeIf { it.action == Intent.ACTION_SEND }
             ?.getStringExtra(Intent.EXTRA_TEXT)
 
-        CoroutineScope(Dispatchers.Main).launch {
+        // lifecycleScope auto-cancels if the activity is destroyed mid-fetch,
+        // avoiding an orphaned coroutine touching a dead activity.
+        lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) { extractor.extract(shared) }
             when (result) {
                 is ExtractResult.Success -> {
