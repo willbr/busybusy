@@ -8,11 +8,6 @@ import org.jsoup.nodes.Element
 
 object ArticleParser {
 
-    private val BLOCK_TAGS = setOf(
-        "h1", "h2", "h3", "h4", "h5", "h6",
-        "p", "blockquote", "figure", "img", "pre", "table", "li",
-    )
-
     fun parse(html: String, url: String?): ParsedArticle {
         val readability = Readability4J(url ?: "https://localhost/", html)
         val parsed = readability.parse()
@@ -28,6 +23,10 @@ object ArticleParser {
     private fun extractTitle(html: String): String? =
         Jsoup.parse(html).title().takeIf { it.isNotBlank() }
 
+    // Walks direct children in document order. A recognized block's nested
+    // block-level children (e.g. a <p> inside a <blockquote>) are folded into the
+    // parent's text via jsoup's recursive .text(); this flattening is acceptable
+    // for Phase 1. Unrecognized wrappers (<div>, <section>) are descended into.
     private fun walk(root: Element, out: MutableList<ArticleBlock>) {
         for (el in root.children()) {
             when (el.tagName().lowercase()) {
