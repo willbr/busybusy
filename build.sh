@@ -16,9 +16,12 @@ EMULATOR="$ANDROID_HOME/emulator/emulator"
 ADB="$ANDROID_HOME/platform-tools/adb"
 AVD_NAME="pixel7_api36"
 
-# $SDKM is used unquoted on purpose: word-splitting separates the binary from its
-# --sdk_root flag. Safe because these paths contain no spaces in the documented layout.
+# $SDKM / $AVDM are used unquoted on purpose: word-splitting separates the binary
+# from its flags. Safe because these paths contain no spaces in the documented layout.
+# Both MUST carry --sdk_root: without it the Homebrew avdmanager defaults its SDK
+# root to the current working directory and installs a stray cmdline-tools copy there.
 SDKM="$SDK_MANAGER --sdk_root=$ANDROID_HOME"
+AVDM="$AVD_MANAGER --sdk_root=$ANDROID_HOME"
 
 ensure_sdk() {
   if [[ ! -x "$SDK_MANAGER" ]]; then
@@ -42,8 +45,8 @@ arch_image() {
 provision_emulator() {
   local img; img="$(arch_image)"
   $SDKM "emulator" "$img"
-  if ! "$AVD_MANAGER" list avd 2>/dev/null | grep -q "$AVD_NAME"; then
-    echo "no" | "$AVD_MANAGER" create avd -n "$AVD_NAME" -k "$img" --device "pixel_7"
+  if ! $AVDM list avd 2>/dev/null | grep -q "$AVD_NAME"; then
+    echo "no" | $AVDM create avd -n "$AVD_NAME" -k "$img" --device "pixel_7"
   fi
   echo "Booting $AVD_NAME ..."
   # nohup + disown so the emulator survives this script exiting ("stays running").

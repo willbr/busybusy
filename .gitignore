@@ -10,3 +10,8 @@ app/build/
 .cxx
 local.properties
 *.apk
+
+# Android SDK / tooling must never live in the repo (defensive: a misconfigured
+# avdmanager once dropped a stray cmdline-tools copy into the project root).
+/cmdline-tools/
+/android-sdk/
