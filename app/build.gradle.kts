@@ -33,14 +33,6 @@ android {
     }
     testOptions {
         unitTests.isReturnDefaultValues = true
-        unitTests.all {
-            // Pin the JVM locale for unit tests so BreakIterator uses the
-            // intended English sentence-breaking rules (e.g. "Dr." is not a
-            // sentence terminator). The forked test worker does not inherit
-            // command-line -D flags and the host default may be en_GB.
-            it.systemProperty("user.language", "en")
-            it.systemProperty("user.country", "US")
-        }
     }
 }
 
