@@ -165,7 +165,10 @@ the service → flush queue → re-speak from there.
   nav/ads/share/subscribe/related boilerplate and footnote markers `[1]`; keep
   images/tables/code as display-only blocks; collapse whitespace. Sentence
   segmentation via `BreakIterator.getSentenceInstance()` (no extra dep,
-  locale-aware, handles "Dr."/"U.S." reasonably).
+  locale-aware). Note: `java.text.BreakIterator` has NO abbreviation awareness —
+  it splits "Dr."/"U.S." into their own sentences. That's an accepted cosmetic
+  imperfection for Phase 1 (the highlight briefly advances on an abbreviation);
+  abbreviation-aware segmentation is Phase 2 work.
 - **Phase 2 (layered in after Phase 1 works):** speech normalization on spoken
   blocks only — expand common abbreviations (`Dr.`, `e.g.`), natural numbers/
   percent/currency, fix smart-quotes/dashes/ellipses. Rule-based, grown
